@@ -1,0 +1,19 @@
+domain: 
+
+update_interval: 
+
+database:
+    host: 
+    port: 
+    user: 
+    password: 
+    database: 
+
+security:
+    token_secret_key: 
+    token_name: 
+    expire_time: 
+
+backend_accounts:
+    host: 
+    port: 

@@ -1,0 +1,8 @@
+aiofile
+asyncpg
+fastapi
+httpx
+python-jose[cryptography]
+pyyaml
+SQLAlchemy
+uvicorn
