@@ -1,4 +1,4 @@
-aiofile
+aiofiles
 asyncpg
 fastapi
 httpx

@@ -5,7 +5,6 @@ from sqlalchemy import Table, Column, Integer, String, DateTime, MetaData
 from sqlalchemy.dialects.postgresql import UUID, TEXT
 from datetime import datetime
 
-from .models import *
 from .config import cfg
 
 

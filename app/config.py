@@ -1,7 +1,10 @@
 import os
 import asyncio
 import yaml
-from aiofile import async_open
+
+from datetime import datetime, timezone, timedelta
+from aiofiles import open as async_open
+from aiofiles.os import stat as async_stat
 from types import SimpleNamespace
 
 
@@ -27,14 +30,17 @@ class YamlConfigManager:
             database = data['database']
             config.DB_CONNECTION_STRING = f"postgresql+asyncpg://{database['user']}:{database['password']}@{database['host']}:{database['port']}/{database['database']}"
 
-            admin = data['admin']
-            config.ADMIN_LOGIN = admin['login']
-            config.ADMIN_PASSWORD = admin['password']
-
 
     async def _update(self, config):
-        async with async_open(self._config_file, 'r') as f:
-            data = yaml.safe_load(await f.read())
+        conf_stat = await async_stat(self._config_file)
+        mod_conf_datetime = datetime.fromtimestamp(conf_stat.st_mtime)
+
+        if not config.FIRST_RUN and datetime.now() > mod_conf_datetime + timedelta(seconds=self._update_interval):
+            return
+        cfg.FIRST_RUN = False
+
+        async with async_open(self._config_file, mode='r') as conf:
+            data = yaml.safe_load(await conf.read())
 
             config.DOMAIN = data['domain']
             self._update_interval = data['update_interval']
@@ -57,3 +63,4 @@ class YamlConfigManager:
 cfg = SimpleNamespace()
 
 cfg.STARTUP_DB_ACTION = False
+cfg.FIRST_RUN = True
