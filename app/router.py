@@ -24,11 +24,11 @@ def HTTPanswer(status_code, description, action_cookie=None, token=None):
     return response
 
 
-# external general rout to check auth
+# external general rout to check auth 
 
 @router.get('/is_auth')
-async def is_auth(current_user = Depends(logic.auth_required)):
-    return HTTPanswer(200, 'Auth OK')
+async def is_auth(token: schemas.Token):
+    return await logic.is_auth(token.token)
 
 
 # external routes for manage sessions

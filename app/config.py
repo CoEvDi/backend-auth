@@ -55,9 +55,9 @@ class YamlConfigManager:
 
 
     async def start(self, config):
-        self._update_task = asyncio.ensure_future(self._update_loop(config))
         await self._init(config)
         await self._update(config)
+        self._update_task = asyncio.ensure_future(self._update_loop(config))
 
 
 cfg = SimpleNamespace()

@@ -7,15 +7,11 @@ from datetime import datetime, timedelta
 from .database import sessions
 from .database import _engine
 from .config import cfg
-from . import schemas # maybe fix to from .schemas import CurrenUser
+from .schemas import CurrentUser
 from .errors import HTTPabort
 
 
-async def auth_required(request: Request):
-    token = request.cookies.get(cfg.TOKEN_NAME)
-    if not token:
-        HTTPabort(401, 'Incorrect token name')
-
+async def check_token(token):
     try:
         payload = jwt.decode(token, cfg.TOKEN_SECRET_KEY, algorithms=['HS256'])
         account_id: int = payload.get('account_id')
@@ -39,7 +35,20 @@ async def auth_required(request: Request):
         if not current_user:
             HTTPabort(401, 'Unauthorized')
 
-        return schemas.CurrentUser(cu, role)
+        return CurrentUser(cu, role)
+
+
+async def auth_required(request: Request):
+    token = request.cookies.get(cfg.TOKEN_NAME)
+    if not token:
+        HTTPabort(401, 'Incorrect token name')
+
+    return await check_token(token)
+
+
+async def is_auth(token):
+    cu = await check_token(token)
+    return cu.auth_info()
 
 
 async def authenticate_user(login, password):
