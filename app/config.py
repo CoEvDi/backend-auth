@@ -13,7 +13,6 @@ class YamlConfigManager:
         self._update_interval = interval
         self._config_file = 'config.yaml'
 
-
     async def _update_loop(self, config):
         while True:
             try:
@@ -22,14 +21,12 @@ class YamlConfigManager:
                 print(f'Failed to update config, see you next time \n{repr(e)}')
             await asyncio.sleep(self._update_interval)
 
-
     async def _init(self, config):
         async with async_open(self._config_file, 'r') as f:
             data = yaml.safe_load(await f.read())
 
             database = data['database']
             config.DB_CONNECTION_STRING = f"postgresql+asyncpg://{database['user']}:{database['password']}@{database['host']}:{database['port']}/{database['database']}"
-
 
     async def _update(self, config):
         conf_stat = await async_stat(self._config_file)
@@ -53,14 +50,11 @@ class YamlConfigManager:
             backend_accounts = data['backend_accounts']
             config.BACKEND_ACCOUNTS_ADDRESS = f"http://{backend_accounts['host']}:{backend_accounts['port']}"
 
-
     async def start(self, config):
-        await self._init(config)
-        await self._update(config)
         self._update_task = asyncio.ensure_future(self._update_loop(config))
+        await self._init(config)
 
 
 cfg = SimpleNamespace()
-
 cfg.STARTUP_DB_ACTION = False
 cfg.FIRST_RUN = True

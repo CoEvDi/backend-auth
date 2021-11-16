@@ -3,6 +3,7 @@ import httpx
 from fastapi import Request
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
+from sqlalchemy.sql import select
 
 from .database import sessions
 from .database import _engine
@@ -14,28 +15,28 @@ from .errors import HTTPabort
 async def check_token(token):
     try:
         payload = jwt.decode(token, cfg.TOKEN_SECRET_KEY, algorithms=['HS256'])
-        account_id: int = payload.get('account_id')
+        account_id: int = int(payload.get('account_id'))
         role: str = payload.get('role')
         session_id = uuid.UUID(payload.get('session_id'))
         login_time = datetime.fromisoformat(payload.get('login_time'))
         client = payload.get('client')
     except:
-        HTTPabort(401, 'Unauthorized')
+        return CurrentUser()
 
     async with _engine.begin() as conn:
         if datetime.utcnow() > (login_time + timedelta(days=cfg.TOKEN_EXPIRE_TIME)):
             query = sessions.delete().where(sessions.c.id == session_id)
             await conn.execute(query)
-            HTTPabort(401, 'Unauthorized')
+            return CurrentUser()
 
         query = select(sessions).where(sessions.c.id == session_id)
         result = await conn.execute(query)
         current_user = result.first()
 
         if not current_user:
-            HTTPabort(401, 'Unauthorized')
+            return CurrentUser()
 
-        return CurrentUser(cu, role)
+        return CurrentUser(current_user, role)
 
 
 async def auth_required(request: Request):
@@ -43,6 +44,14 @@ async def auth_required(request: Request):
     if not token:
         HTTPabort(401, 'Incorrect token name')
 
+    current_user = await check_token(token)
+    if not current_user.is_auth:
+        HTTPabort(401, 'Unauthorized')
+    return current_user
+
+
+async def get_current_user(request: Request):
+    token = request.cookies.get(cfg.TOKEN_NAME)
     return await check_token(token)
 
 
@@ -61,12 +70,13 @@ async def authenticate_user(login, password):
                                json=json)
 
         if answer.status_code != 200:
-            HTTPabort(answer.status_code, answer.json()['content'])
-        account_id = answer.json()['account_id']
-        role = answer.json()['role']
+            HTTPabort(answer.status_code, answer.json()['detail'])
+        account = answer.json()['content']
+        account_id = int(account['account_id'])
+        role = account['role']
 
     async with _engine.begin() as conn:
-        query = sessions.insert().values(account_id=account.id, client='web')
+        query = sessions.insert().values(account_id=account_id, client='web')
         result = await conn.execute(query)
 
     jwt_account_data = {

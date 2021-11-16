@@ -9,7 +9,7 @@ def HTTPabort(status_code, description):
 async def server_error(request, exc):
     return JSONResponse(
         status_code=500,
-        content='Internal server error - we are sorry(',
+        content={'detail': 'Internal server error - we are sorry('}
     )
 
 

@@ -5,6 +5,7 @@ from typing import Optional
 from . import schemas
 from . import logic
 from .config import cfg
+from .errors import HTTPabort
 
 
 router = APIRouter()
@@ -17,6 +18,7 @@ def HTTPanswer(status_code, description, action_cookie=None, token=None):
     )
     if action_cookie == 'set':
         response.set_cookie(key=cfg.TOKEN_NAME, value=token, path='/',
+                            max_age=cfg.TOKEN_EXPIRE_TIME * 24 * 3600,
                             domain=cfg.DOMAIN, httponly=True, samesite=None)
     if action_cookie == 'delete':
         response.delete_cookie(cfg.TOKEN_NAME, path='/', domain=cfg.DOMAIN)
@@ -35,9 +37,9 @@ async def is_auth(token: schemas.Token):
 
 @router.post('/login')
 async def login(account: schemas.AuthCredentials,
-                current_user = Depends(logic.auth_required)):
+                current_user = Depends(logic.get_current_user)):
     if current_user.is_auth:
-        HTTPanswer(409, 'User already logged-in')
+        HTTPabort(409, 'User already logged-in')
     token = await logic.authenticate_user(account.login, account.password)
     return HTTPanswer(200, 'Successfully logged-in', 'set', token)
 
