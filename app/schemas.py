@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class CurrentUser:
@@ -41,10 +42,11 @@ class AuthCredentials(BaseModel):
     password: str
 
 
-class Password(BaseModel):
+class PasswordSession(BaseModel):
     password: str
+    session_id: Optional[str] = None
 
 
-class Session(BaseModel):
-    session: str
-    user_id: int
+class SessionDel(BaseModel):
+    session_id: str
+    account_id: int

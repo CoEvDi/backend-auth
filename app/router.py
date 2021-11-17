@@ -26,9 +26,14 @@ def HTTPanswer(status_code, description, action_cookie=None, token=None):
     return response
 
 
-# external general rout to check auth 
+@router.get('/version')
+async def version():
+    return HTTPanswer(200, f'Current version - {cfg.VERSION}')
 
-@router.get('/is_auth')
+
+# external general route to check auth 
+
+@router.post('/is_auth')
 async def is_auth(token: schemas.Token):
     return await logic.is_auth(token.token)
 
@@ -50,22 +55,20 @@ async def logout(current_user = Depends(logic.auth_required)):
     return HTTPanswer(200, 'Successfully logouted', 'delete')
 
 
-@router.post('/close_other_sessions')
-async def close_other_sessions(password: schemas.Password,
-                               current_user = Depends(logic.auth_required)):
-    await logic.close_other_sessions(current_user, password.password)
-    return HTTPanswer(200, 'Closed all other sessions')
+@router.post('/close_sessions/{mode}')
+async def close_sessions(mode: str, password_and_session: schemas.PasswordSession,
+                         current_user = Depends(logic.auth_required)):
+    if mode not in ['all', 'one', 'other']:
+        HTTPabort(404, 'Unknown closing mode')
+    await logic.close_sessions(current_user, password_and_session, mode)
+    return HTTPanswer(200, f'Closed {mode} session(s)')
 
 
 # internal routes for accounts micro-service
 
-@router.delete('/delete_other_sessions')
-async def delete_other_sessions(session: schemas.Session):
-    await logic.delete_sessions(session, 'other')
-    return HTTPanswer(200, 'Deleted')
-
-
-@router.delete('/delete_all_sessions')
-async def delete_all_sessions(session: schemas.Session):
-    await logic.delete_sessions(session)
+@router.post('/delete_sessions/{mode}')
+async def delete_other_sessions(mode: str, session: schemas.SessionDel):
+    if mode not in ['all', 'one', 'other']:
+        HTTPabort(404, 'Unknown closing mode')
+    await logic.delete_sessions(session.account_id, session.session_id, mode)
     return HTTPanswer(200, 'Deleted')

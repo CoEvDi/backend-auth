@@ -41,9 +41,6 @@ async def check_token(token):
 
 async def auth_required(request: Request):
     token = request.cookies.get(cfg.TOKEN_NAME)
-    if not token:
-        HTTPabort(401, 'Incorrect token name')
-
     current_user = await check_token(token)
     if not current_user.is_auth:
         HTTPabort(401, 'Unauthorized')
@@ -56,8 +53,10 @@ async def get_current_user(request: Request):
 
 
 async def is_auth(token):
-    cu = await check_token(token)
-    return cu.auth_info()
+    current_user = await check_token(token)
+    if not current_user.is_auth:
+        HTTPabort(401, 'Unauthorized')
+    return current_user.auth_info()
 
 
 async def authenticate_user(login, password):
@@ -66,8 +65,7 @@ async def authenticate_user(login, password):
             'login': login,
             'password': password
         }
-        answer = await ac.post(f'{cfg.BACKEND_ACCOUNTS_ADDRESS}/verify_account',
-                               json=json)
+        answer = await ac.post(cfg.BA_VERIFY_ACCOUNT_LINK, json=json)
 
         if answer.status_code != 200:
             HTTPabort(answer.status_code, answer.json()['detail'])
@@ -96,25 +94,26 @@ async def logout_user(session_id):
         await conn.execute(query)
 
 
-async def close_other_sessions(current_user, password):
+async def delete_sessions(account_id, session_id, mode):
+    async with _engine.begin() as conn:
+        query = sessions.delete().where(sessions.c.account_id == account_id)
+        if mode == 'one':
+            query = query.where(sessions.c.id == uuid.UUID(session_id))
+        elif mode == 'other':
+            query = query.where(sessions.c.id != uuid.UUID(session_id))
+        await conn.execute(query)
+
+
+async def close_sessions(current_user, password_and_session, mode):
     async with httpx.AsyncClient() as ac:
         json = {
             'account_id': current_user.account_id,
-            'password': password
+            'password': password_and_session.password
         }
-        answer = await ac.post(f'{cfg.M_ACCOUNTS_ADDRESS}/verify_account', json=json)
+        answer = await ac.post(cfg.BA_VERIFY_ACCOUNT_LINK, json=json)
 
         if answer.status_code != 200:
-            HTTPabort(answer.status_code, answer.json()['content'])
+            HTTPabort(answer.status_code, answer.json()['detail'])
 
-    async with _engine.begin() as conn:
-        query = sessions.delete().where(sessions.c.account_id == current_user.account_id).where(sessions.c.id != current_user.session_id)
-        await conn.execute(query)
-
-
-async def delete_sessions(session, which=None):
-    async with _engine.begin() as conn:
-        query = sessions.delete().where(sessions.c.account_id == session.account_id)
-        if which == 'other':
-            query = query.where(sessions.c.id != session.session_id)
-        await conn.execute(query)
+    session_id = password_and_session.session_id if password_and_session.session_id else current_user.session_id
+    await delete_sessions(current_user.account_id, session_id, mode)

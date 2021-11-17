@@ -25,6 +25,8 @@ class YamlConfigManager:
         async with async_open(self._config_file, 'r') as f:
             data = yaml.safe_load(await f.read())
 
+            config.VERSION = data['version']
+
             database = data['database']
             config.DB_CONNECTION_STRING = f"postgresql+asyncpg://{database['user']}:{database['password']}@{database['host']}:{database['port']}/{database['database']}"
 
@@ -48,7 +50,7 @@ class YamlConfigManager:
             config.TOKEN_EXPIRE_TIME = security['expire_time']
 
             backend_accounts = data['backend_accounts']
-            config.BACKEND_ACCOUNTS_ADDRESS = f"http://{backend_accounts['host']}:{backend_accounts['port']}"
+            config.BA_VERIFY_ACCOUNT_LINK = f"http://{backend_accounts['host']}:{backend_accounts['port']}/{backend_accounts['verify_route']}"
 
     async def start(self, config):
         self._update_task = asyncio.ensure_future(self._update_loop(config))
