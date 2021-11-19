@@ -27,12 +27,11 @@ class CurrentUser:
 
     def auth_info(self):
         return {
-            'COEVDI_ACCOUNT_ID': self.account_id,
-            'COEVDI_SESSION_ID': self.session_id,
+            'COEVDI_ACCOUNT_ID': str(self.account_id),
+            'COEVDI_SESSION_ID': str(self.session_id),
             'COEVDI_ACCOUNT_ROLE': self.role,
-            'COEVDI_LOGIN_TIME': self.login_time,
+            'COEVDI_LOGIN_TIME': self.login_time.isoformat(),
             'COEVDI_CLIENT': self.client
-
         }
 
 

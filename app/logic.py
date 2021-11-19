@@ -47,6 +47,13 @@ async def auth_required(request: Request):
     return current_user
 
 
+async def auth_forbidden(request: Request):
+    token = request.cookies.get(cfg.TOKEN_NAME)
+    current_user = await check_token(token)
+    if current_user.is_auth:
+        HTTPabort(409, 'User must be unauthorized')
+
+
 async def get_current_user(request: Request):
     token = request.cookies.get(cfg.TOKEN_NAME)
     return await check_token(token)

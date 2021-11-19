@@ -35,7 +35,8 @@ async def version():
 
 @router.post('/is_auth')
 async def is_auth(token: schemas.Token):
-    return await logic.is_auth(token.token)
+    credentials = await logic.is_auth(token.token)
+    return HTTPanswer(200, credentials)
 
 
 # external routes for manage sessions
